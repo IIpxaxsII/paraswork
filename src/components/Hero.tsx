@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import parasProfile from "@/assets/paras-profile.png";
+import parasHeroImage from "@/assets/paras-hero-image.png";
 
 const Hero = () => {
   const scrollToSection = (id: string) => {
@@ -50,15 +50,19 @@ const Hero = () => {
         {/* Right content - Profile Picture */}
         <div className="flex justify-center lg:justify-end animate-float">
           <div className="relative">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-neon-purple via-neon-blue to-neon-cyan p-1 animate-glow">
-              <div className="bg-background rounded-full p-2">
+            {/* Glowing background layers */}
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-neon-purple/20 via-neon-blue/20 to-neon-cyan/20 blur-xl scale-110 animate-glow"></div>
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-neon-purple via-neon-blue to-neon-cyan p-[2px] animate-glow">
+              <div className="bg-background rounded-2xl p-2">
                 <img 
-                  src={parasProfile}
+                  src={parasHeroImage}
                   alt="Paras - Full Stack Developer"
-                  className="w-80 h-80 lg:w-96 lg:h-96 rounded-full object-cover"
+                  className="w-80 h-96 lg:w-96 lg:h-[32rem] rounded-xl object-cover shadow-2xl"
                 />
               </div>
             </div>
+            {/* Additional glow effect */}
+            <div className="absolute -inset-4 bg-gradient-to-r from-neon-purple/10 via-neon-blue/10 to-neon-cyan/10 rounded-3xl blur-2xl animate-pulse"></div>
           </div>
         </div>
       </div>
