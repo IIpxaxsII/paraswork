@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import profilePicture from "@/assets/profile-picture.jpg";
+import parasProfile from "@/assets/paras-profile.png";
 
 const Hero = () => {
   const scrollToSection = (id: string) => {
@@ -53,7 +53,7 @@ const Hero = () => {
             <div className="absolute inset-0 rounded-full bg-gradient-to-r from-neon-purple via-neon-blue to-neon-cyan p-1 animate-glow">
               <div className="bg-background rounded-full p-2">
                 <img 
-                  src={profilePicture}
+                  src={parasProfile}
                   alt="Paras - Full Stack Developer"
                   className="w-80 h-80 lg:w-96 lg:h-96 rounded-full object-cover"
                 />
