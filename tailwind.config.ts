@@ -93,6 +93,7 @@ export default {
         "float": "float 3s ease-in-out infinite",
         "fade-in": "fade-in 0.6s ease-out",
         "slide-up": "slide-up 0.6s ease-out",
+        "spin-slow": "spin 8s linear infinite",
       },
     },
   },

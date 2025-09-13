@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import parasHeroImage from "@/assets/paras-hero-image.png";
+import parasCircularProfile from "@/assets/paras-circular-profile.png";
 
 const Hero = () => {
   const scrollToSection = (id: string) => {
@@ -47,22 +47,37 @@ const Hero = () => {
           </div>
         </div>
         
-        {/* Right content - Profile Picture */}
+        {/* Right content - Circular Profile Picture with Professional Animations */}
         <div className="flex justify-center lg:justify-end animate-float">
           <div className="relative">
-            {/* Glowing background layers */}
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-neon-purple/20 via-neon-blue/20 to-neon-cyan/20 blur-xl scale-110 animate-glow"></div>
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-neon-purple via-neon-blue to-neon-cyan p-[2px] animate-glow">
-              <div className="bg-background rounded-2xl p-2">
+            {/* Outer rotating glow ring */}
+            <div className="absolute inset-0 w-80 h-80 lg:w-96 lg:h-96 rounded-full animate-spin-slow">
+              <div className="w-full h-full rounded-full bg-gradient-to-r from-neon-purple via-neon-blue to-neon-cyan p-1 opacity-60"></div>
+            </div>
+            
+            {/* Middle pulsing glow */}
+            <div className="absolute inset-2 w-76 h-76 lg:w-92 lg:h-92 rounded-full bg-gradient-to-r from-neon-cyan via-neon-purple to-neon-blue blur-md animate-pulse opacity-40"></div>
+            
+            {/* Main glowing border */}
+            <div className="absolute inset-4 w-72 h-72 lg:w-88 lg:h-88 rounded-full bg-gradient-to-r from-neon-purple via-neon-blue to-neon-cyan p-[3px] animate-glow">
+              <div className="w-full h-full bg-background rounded-full p-2">
                 <img 
-                  src={parasHeroImage}
+                  src={parasCircularProfile}
                   alt="Paras - Full Stack Developer"
-                  className="w-80 h-96 lg:w-96 lg:h-[32rem] rounded-xl object-cover shadow-2xl"
+                  className="w-full h-full rounded-full object-cover shadow-2xl"
                 />
               </div>
             </div>
-            {/* Additional glow effect */}
-            <div className="absolute -inset-4 bg-gradient-to-r from-neon-purple/10 via-neon-blue/10 to-neon-cyan/10 rounded-3xl blur-2xl animate-pulse"></div>
+            
+            {/* Inner subtle shine effect */}
+            <div className="absolute inset-6 w-68 h-68 lg:w-84 lg:h-84 rounded-full bg-gradient-to-tr from-white/20 to-transparent pointer-events-none animate-pulse"></div>
+            
+            {/* Floating particles effect */}
+            <div className="absolute inset-0 w-80 h-80 lg:w-96 lg:h-96">
+              <div className="absolute top-4 right-8 w-2 h-2 bg-neon-cyan rounded-full animate-ping"></div>
+              <div className="absolute bottom-8 left-6 w-1 h-1 bg-neon-purple rounded-full animate-pulse"></div>
+              <div className="absolute top-12 left-4 w-1.5 h-1.5 bg-neon-blue rounded-full animate-bounce"></div>
+            </div>
           </div>
         </div>
       </div>
