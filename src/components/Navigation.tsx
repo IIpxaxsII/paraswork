@@ -9,8 +9,7 @@ const Navigation = () => {
     { id: "home", label: "Home" },
     { id: "about", label: "About" },
     { id: "skills", label: "Skills" },
-    { id: "projects", label: "Projects" },
-    { id: "contact", label: "Contact" }
+    { id: "projects", label: "Projects" }
   ];
 
   const scrollToSection = (id: string) => {
@@ -60,6 +59,14 @@ const Navigation = () => {
                 {item.label}
               </button>
             ))}
+            
+            {/* Special Contact Me Button */}
+            <button
+              onClick={() => scrollToSection('contact')}
+              className="bg-gradient-to-r from-neon-purple to-neon-blue hover:from-neon-purple/80 hover:to-neon-blue/80 text-white px-6 py-2 rounded-full text-sm font-semibold glow-hover transition-all duration-300"
+            >
+              Contact Me
+            </button>
           </div>
 
           {/* Mobile menu button */}
@@ -90,6 +97,14 @@ const Navigation = () => {
                   {item.label}
                 </button>
               ))}
+              
+              {/* Special Contact Me Button for Mobile */}
+              <button
+                onClick={() => scrollToSection('contact')}
+                className="w-full bg-gradient-to-r from-neon-purple to-neon-blue hover:from-neon-purple/80 hover:to-neon-blue/80 text-white px-3 py-2 rounded-lg text-base font-semibold mt-2 transition-all duration-300"
+              >
+                Contact Me
+              </button>
             </div>
           </div>
         )}
