@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Github, Linkedin, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { motion } from "framer-motion";
 import emailjs from '@emailjs/browser';
 
 const Contact = () => {
@@ -98,23 +99,51 @@ const Contact = () => {
     }
   ];
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.6
+      }
+    }
+  };
+
   return (
-    <section id="contact" className="py-20 px-4 bg-darker-bg">
+    <motion.section 
+      id="contact" 
+      className="py-20 px-4 bg-darker-bg"
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-100px" }}
+      variants={containerVariants}
+    >
       <div className="container mx-auto max-w-4xl">
-        <div className="text-center mb-16">
+        <motion.div className="text-center mb-16" variants={itemVariants}>
           <h2 className="text-4xl lg:text-5xl font-bold gradient-text mb-6">Get in Touch</h2>
           <div className="w-24 h-1 bg-gradient-to-r from-neon-purple to-neon-cyan mx-auto"></div>
           <p className="text-lg text-muted-foreground mt-6">
             Let's connect and explore opportunities to work together.
           </p>
-        </div>
+        </motion.div>
         
-        <div className="flex justify-center">
+        <motion.div className="flex justify-center" variants={itemVariants}>
           <div className="flex flex-col sm:flex-row gap-8 sm:gap-12">
             {socialLinks.map((link, index) => {
               const Icon = link.icon;
               return (
-                <a
+                <motion.a
                   key={index}
                   href={link.href}
                   target="_blank"
@@ -123,11 +152,15 @@ const Contact = () => {
                     group flex items-center justify-center gap-4 px-8 py-6 rounded-xl 
                     ${link.bgColor} ${link.hoverBg} ${link.textColor}
                     transform transition-all duration-300 ease-in-out
-                    hover:scale-105 hover:shadow-2xl
                     border-2 border-transparent hover:border-gradient-to-r hover:from-neon-purple hover:to-neon-cyan
                     relative overflow-hidden
                     min-w-[200px]
                   `}
+                  whileHover={{ 
+                    scale: 1.05,
+                    y: -5
+                  }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   {/* Glowing border effect on hover */}
                   <div className="absolute inset-0 bg-gradient-to-r from-neon-purple via-neon-blue to-neon-cyan opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl -z-10 blur-sm"></div>
@@ -136,24 +169,30 @@ const Contact = () => {
                     <Icon className="w-6 h-6 group-hover:animate-pulse" />
                     <span className="font-semibold text-lg">{link.label}</span>
                   </div>
-                </a>
+                </motion.a>
               );
             })}
           </div>
-        </div>
+        </motion.div>
         
         {/* Contact Form Section */}
-        <div className="mt-20 pt-16 border-t border-muted/20">
-          <div className="text-center mb-12">
+        <motion.div 
+          className="mt-20 pt-16 border-t border-muted/20"
+          variants={itemVariants}
+        >
+          <motion.div className="text-center mb-12" variants={itemVariants}>
             <h3 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">Send Me a Message</h3>
             <p className="text-muted-foreground">
               Have a project in mind? I'd love to hear about it.
             </p>
-          </div>
+          </motion.div>
           
-          <div className="max-w-2xl mx-auto">
+          <motion.div className="max-w-2xl mx-auto" variants={itemVariants}>
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="animate-slide-up">
+              <motion.div 
+                variants={itemVariants}
+                whileFocus={{ scale: 1.02 }}
+              >
                 <Input
                   type="text"
                   name="name"
@@ -163,9 +202,12 @@ const Contact = () => {
                   required
                   className="w-full h-12 px-4 bg-card-bg border border-muted/30 rounded-lg text-foreground placeholder:text-muted-foreground focus:border-neon-purple focus:ring-2 focus:ring-neon-purple/20 transition-all duration-300"
                 />
-              </div>
+              </motion.div>
               
-              <div className="animate-slide-up" style={{animationDelay: "0.1s"}}>
+              <motion.div 
+                variants={itemVariants}
+                whileFocus={{ scale: 1.02 }}
+              >
                 <Input
                   type="email"
                   name="email"
@@ -175,9 +217,12 @@ const Contact = () => {
                   required
                   className="w-full h-12 px-4 bg-card-bg border border-muted/30 rounded-lg text-foreground placeholder:text-muted-foreground focus:border-neon-purple focus:ring-2 focus:ring-neon-purple/20 transition-all duration-300"
                 />
-              </div>
+              </motion.div>
               
-              <div className="animate-slide-up" style={{animationDelay: "0.2s"}}>
+              <motion.div 
+                variants={itemVariants}
+                whileFocus={{ scale: 1.02 }}
+              >
                 <Textarea
                   name="message"
                   placeholder="Your Message"
@@ -187,23 +232,27 @@ const Contact = () => {
                   rows={6}
                   className="w-full px-4 py-3 bg-card-bg border border-muted/30 rounded-lg text-foreground placeholder:text-muted-foreground focus:border-neon-purple focus:ring-2 focus:ring-neon-purple/20 transition-all duration-300 resize-none"
                 />
-              </div>
+              </motion.div>
               
-              <div className="animate-slide-up" style={{animationDelay: "0.3s"}}>
+              <motion.div 
+                variants={itemVariants}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full h-14 bg-gradient-to-r from-neon-purple via-neon-blue to-neon-cyan text-white font-semibold text-lg rounded-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 group disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  className="w-full h-14 bg-gradient-to-r from-neon-purple via-neon-blue to-neon-cyan text-white font-semibold text-lg rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 group disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   <Send className={`w-5 h-5 mr-3 ${isSubmitting ? 'animate-spin' : 'group-hover:animate-pulse'}`} />
                   {isSubmitting ? 'Sending...' : 'Send Message'}
                 </Button>
-              </div>
+              </motion.div>
             </form>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
-    </section>
+    </motion.section>
   );
 };
 
