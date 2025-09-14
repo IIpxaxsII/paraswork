@@ -1,6 +1,58 @@
-import { Github, Linkedin } from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Github, Linkedin, Send } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const Contact = () => {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    message: ""
+  });
+  const { toast } = useToast();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.name || !formData.email || !formData.message) {
+      toast({
+        title: "Please fill in all fields",
+        description: "All fields are required to send your message.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast({
+        title: "Invalid email format",
+        description: "Please enter a valid email address.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // TODO: Implement actual email sending (requires backend service like EmailJS or Formspree)
+    console.log("Form data to send:", formData);
+    
+    toast({
+      title: "Message sent successfully!",
+      description: "Thank you for reaching out. I'll get back to you soon.",
+    });
+    
+    setFormData({ name: "", email: "", message: "" });
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
   const socialLinks = [
     {
       icon: Linkedin,
@@ -61,6 +113,66 @@ const Contact = () => {
                 </a>
               );
             })}
+          </div>
+        </div>
+        
+        {/* Contact Form Section */}
+        <div className="mt-20 pt-16 border-t border-muted/20">
+          <div className="text-center mb-12">
+            <h3 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">Send Me a Message</h3>
+            <p className="text-muted-foreground">
+              Have a project in mind? I'd love to hear about it.
+            </p>
+          </div>
+          
+          <div className="max-w-2xl mx-auto">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="animate-slide-up">
+                <Input
+                  type="text"
+                  name="name"
+                  placeholder="Your Name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  className="w-full h-12 px-4 bg-card-bg border border-muted/30 rounded-lg text-foreground placeholder:text-muted-foreground focus:border-neon-purple focus:ring-2 focus:ring-neon-purple/20 transition-all duration-300"
+                />
+              </div>
+              
+              <div className="animate-slide-up" style={{animationDelay: "0.1s"}}>
+                <Input
+                  type="email"
+                  name="email"
+                  placeholder="Your Email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                  className="w-full h-12 px-4 bg-card-bg border border-muted/30 rounded-lg text-foreground placeholder:text-muted-foreground focus:border-neon-purple focus:ring-2 focus:ring-neon-purple/20 transition-all duration-300"
+                />
+              </div>
+              
+              <div className="animate-slide-up" style={{animationDelay: "0.2s"}}>
+                <Textarea
+                  name="message"
+                  placeholder="Your Message"
+                  value={formData.message}
+                  onChange={handleChange}
+                  required
+                  rows={6}
+                  className="w-full px-4 py-3 bg-card-bg border border-muted/30 rounded-lg text-foreground placeholder:text-muted-foreground focus:border-neon-purple focus:ring-2 focus:ring-neon-purple/20 transition-all duration-300 resize-none"
+                />
+              </div>
+              
+              <div className="animate-slide-up" style={{animationDelay: "0.3s"}}>
+                <Button
+                  type="submit"
+                  className="w-full h-14 bg-gradient-to-r from-neon-purple via-neon-blue to-neon-cyan text-white font-semibold text-lg rounded-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 group"
+                >
+                  <Send className="w-5 h-5 mr-3 group-hover:animate-pulse" />
+                  Send Message
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       </div>
