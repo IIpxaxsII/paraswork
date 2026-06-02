@@ -2,118 +2,143 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Applied AI Engineer — premium dark design system. All colors HSL. */
 
 @layer base {
   :root {
-    /* Dark Portfolio Theme with Neon Accents */
-    --background: 222 20% 6%;
-    --foreground: 210 40% 98%;
+    --background: 225 25% 5%;
+    --foreground: 210 30% 96%;
 
-    --card: 222 18% 8%;
-    --card-foreground: 210 40% 98%;
+    --card: 225 22% 8%;
+    --card-foreground: 210 30% 96%;
 
-    --popover: 222 18% 8%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 225 22% 8%;
+    --popover-foreground: 210 30% 96%;
 
-    --primary: 280 100% 65%;
-    --primary-foreground: 222 20% 6%;
+    --primary: 265 90% 65%;
+    --primary-foreground: 225 25% 5%;
 
-    --secondary: 200 100% 60%;
-    --secondary-foreground: 222 20% 6%;
+    --secondary: 220 95% 62%;
+    --secondary-foreground: 225 25% 5%;
 
-    --accent: 180 100% 55%;
-    --accent-foreground: 222 20% 6%;
+    --accent: 190 95% 60%;
+    --accent-foreground: 225 25% 5%;
 
-    --muted: 222 18% 12%;
-    --muted-foreground: 215 15% 65%;
+    --muted: 225 18% 12%;
+    --muted-foreground: 220 12% 65%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 30% 96%;
 
-    --border: 222 15% 15%;
-    --input: 222 15% 12%;
-    --ring: 280 100% 65%;
+    --border: 225 18% 16%;
+    --input: 225 18% 12%;
+    --ring: 265 90% 65%;
 
-    --radius: 0.75rem;
+    --radius: 0.875rem;
 
-    /* Custom Portfolio Colors */
-    --neon-purple: 280 100% 65%;
-    --neon-blue: 240 100% 60%;
-    --neon-cyan: 180 100% 55%;
-    --dark-bg: 222 20% 6%;
-    --darker-bg: 222 25% 4%;
-    --card-bg: 222 18% 8%;
-    --glow-shadow: 280 100% 65% / 0.4;
+    /* AI palette */
+    --ai-violet: 265 90% 65%;
+    --ai-blue: 220 95% 62%;
+    --ai-cyan: 190 95% 60%;
+    --ai-violet-soft: 265 60% 30%;
+    --ai-cyan-soft: 190 60% 30%;
 
-    --sidebar-background: 0 0% 98%;
+    --surface: 225 22% 9%;
+    --surface-elevated: 225 20% 11%;
+    --darker-bg: 225 28% 4%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    /* Legacy aliases (kept so any leftover refs don't blow up) */
+    --neon-purple: 265 90% 65%;
+    --neon-blue: 220 95% 62%;
+    --neon-cyan: 190 95% 60%;
+    --dark-bg: 225 25% 5%;
+    --card-bg: 225 22% 8%;
+    --glow-shadow: 265 90% 65% / 0.35;
 
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 225 22% 8%;
+    --sidebar-foreground: 210 30% 96%;
+    --sidebar-primary: 265 90% 65%;
+    --sidebar-primary-foreground: 225 25% 5%;
+    --sidebar-accent: 225 18% 12%;
+    --sidebar-accent-foreground: 210 30% 96%;
+    --sidebar-border: 225 18% 16%;
+    --sidebar-ring: 265 90% 65%;
   }
-
-  /* We're using dark theme by default, no separate dark class needed */
 }
 
 @layer base {
   * {
     @apply border-border;
   }
-
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: "cv11", "ss01";
   }
-
+  h1, h2, h3, h4, .font-display {
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
+    letter-spacing: -0.02em;
+  }
   html {
     scroll-behavior: smooth;
   }
 }
 
 @layer components {
-  .glow-text {
-    text-shadow: 0 0 20px hsl(var(--neon-purple) / 0.5);
-  }
-  
-  .glow-border {
-    box-shadow: 0 0 20px hsl(var(--glow-shadow));
-  }
-  
-  .glow-hover {
-    transition: all 0.3s ease-in-out;
-  }
-  
-  .glow-hover:hover {
-    box-shadow: 0 0 30px hsl(var(--glow-shadow)), 0 0 60px hsl(var(--glow-shadow));
-    transform: translateY(-2px);
-  }
-  
   .gradient-text {
-    background: linear-gradient(135deg, hsl(var(--neon-purple)), hsl(var(--neon-blue)), hsl(var(--neon-cyan)));
+    background: linear-gradient(120deg, hsl(var(--ai-violet)), hsl(var(--ai-blue)) 45%, hsl(var(--ai-cyan)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
-  
-  .gradient-bg {
-    background: linear-gradient(135deg, hsl(var(--neon-purple) / 0.1), hsl(var(--neon-blue) / 0.1), hsl(var(--neon-cyan) / 0.1));
+
+  .glass-card {
+    background: linear-gradient(180deg, hsl(var(--surface) / 0.85), hsl(var(--surface) / 0.55));
+    border: 1px solid hsl(var(--border));
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-radius: var(--radius);
+    transition: border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
   }
-  
-  .neon-border {
-    border: 1px solid hsl(var(--neon-purple) / 0.3);
-    background: linear-gradient(135deg, hsl(var(--neon-purple) / 0.05), hsl(var(--neon-blue) / 0.05));
+
+  .glass-card:hover {
+    border-color: hsl(var(--ai-violet) / 0.45);
+    box-shadow: 0 20px 60px -20px hsl(var(--ai-violet) / 0.25);
+  }
+
+  .gradient-border {
+    position: relative;
+    border-radius: var(--radius);
+    background: hsl(var(--surface));
+  }
+  .gradient-border::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, hsl(var(--ai-violet) / 0.7), hsl(var(--ai-cyan) / 0.5));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .chip {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium;
+    background: hsl(var(--muted) / 0.8);
+    color: hsl(var(--foreground) / 0.85);
+    border: 1px solid hsl(var(--border));
+  }
+
+  .ai-glow {
+    box-shadow:
+      0 0 0 1px hsl(var(--ai-violet) / 0.25),
+      0 25px 70px -20px hsl(var(--ai-violet) / 0.35),
+      0 10px 40px -15px hsl(var(--ai-cyan) / 0.25);
+  }
+
+  .section-heading {
+    @apply text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight;
   }
 }
