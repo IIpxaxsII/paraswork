@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Download, MessageSquare, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import parasCircularProfile from "@/assets/paras-circular-profile.png";
+import resumeAsset from "@/assets/resume.pdf.asset.json";
 
 const Hero = () => {
   const scrollToSection = (id: string) => {
@@ -53,7 +54,7 @@ const Hero = () => {
               variant="outline"
               className="h-11 px-5 border-border bg-surface/40 hover:bg-surface hover:border-ai-cyan/50 font-semibold"
             >
-              <a href="/resume.pdf" download>
+              <a href={resumeAsset.url} download="Paras-Bindra-Resume.pdf" target="_blank" rel="noopener noreferrer">
                 <Download className="mr-1.5 w-4 h-4" /> Download Resume
               </a>
             </Button>
