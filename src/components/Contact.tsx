@@ -3,11 +3,9 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Github, Linkedin, Mail, Send } from "lucide-react";
+import { Github, Linkedin, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import emailjs from "@emailjs/browser";
-
-const EMAIL = "parasbindra22@gmail.com"; // mailto fallback
 
 const Contact = () => {
   const [formData, setFormData] = useState({ name: "", email: "", message: "" });
@@ -82,12 +80,6 @@ const Contact = () => {
       label: "GitHub",
       href: "https://github.com/IIpxaxsII",
       hint: "See the code",
-    },
-    {
-      icon: Mail,
-      label: "Email",
-      href: `mailto:${EMAIL}`,
-      hint: EMAIL,
     },
   ];
 

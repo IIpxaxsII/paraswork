@@ -1,9 +1,17 @@
 import { motion } from "framer-motion";
-import { ArrowUpRight, Github, BarChart3, BrainCircuit, Eye, Plane, Star } from "lucide-react";
+import { ArrowUpRight, BarChart3, BrainCircuit, Eye, Plane } from "lucide-react";
 
 const GITHUB = "https://github.com/IIpxaxsII";
 
 const projects = [
+  {
+    title: "Mobile Usage Trend Analysis",
+    tag: "Data Science · ML",
+    icon: BarChart3,
+    description:
+      "Analyzed mobile usage trends using structured data preprocessing, exploratory analysis, feature engineering, and machine learning techniques to uncover meaningful behavioral patterns and actionable insights.",
+    tech: ["Pandas", "NumPy", "EDA", "Feature Engineering", "Regression", "Classification"],
+  },
   {
     title: "NeuroRAG",
     tag: "Generative AI · RAG",
@@ -49,64 +57,7 @@ const FeaturedProjects = () => {
           </h2>
         </motion.div>
 
-        {/* Flagship */}
-        <motion.a
-          href={GITHUB}
-          target="_blank"
-          rel="noopener noreferrer"
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.7 }}
-          className="group block glass-card p-8 md:p-10 mb-6 relative overflow-hidden ai-glow"
-        >
-          <div className="absolute -top-32 -right-32 w-[28rem] h-[28rem] rounded-full bg-ai-violet/25 blur-3xl" />
-          <div className="absolute -bottom-32 -left-32 w-[24rem] h-[24rem] rounded-full bg-ai-cyan/20 blur-3xl" />
-          <div className="relative grid lg:grid-cols-[1.4fr_1fr] gap-8 items-center">
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-ai-violet/15 border border-ai-violet/30 text-ai-violet text-xs font-medium mb-4">
-                <Star className="w-3 h-3" /> Flagship · Data Science + ML
-              </div>
-              <h3 className="font-display text-3xl md:text-4xl font-bold mb-3">
-                Mobile Usage Trend Analysis
-              </h3>
-              <p className="text-muted-foreground text-base md:text-lg leading-relaxed mb-5 max-w-2xl">
-                Analyzed mobile usage trends using structured data preprocessing,
-                exploratory analysis, feature engineering, and machine learning
-                techniques to uncover meaningful behavioral patterns and
-                actionable insights.
-              </p>
-              <div className="flex flex-wrap gap-1.5 mb-6">
-                {[
-                  "Pandas",
-                  "NumPy",
-                  "EDA",
-                  "Feature Engineering",
-                  "Regression",
-                  "Classification",
-                  "Model Evaluation",
-                  "Visualization",
-                ].map((t) => (
-                  <span key={t} className="chip">
-                    {t}
-                  </span>
-                ))}
-              </div>
-              <div className="inline-flex items-center gap-2 text-sm font-semibold text-ai-cyan group-hover:translate-x-1 transition-transform">
-                <Github className="w-4 h-4" /> View on GitHub
-                <ArrowUpRight className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="hidden lg:flex items-center justify-center">
-              <div className="w-48 h-48 rounded-2xl border border-border bg-surface/60 backdrop-blur flex items-center justify-center">
-                <BarChart3 className="w-20 h-20 text-ai-violet" />
-              </div>
-            </div>
-          </div>
-        </motion.a>
-
-        {/* Other projects */}
-        <div className="grid md:grid-cols-3 gap-5">
+        <div className="grid md:grid-cols-2 gap-5">
           {projects.map((p, i) => {
             const Icon = p.icon;
             return (
@@ -119,7 +70,7 @@ const FeaturedProjects = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-60px" }}
                 transition={{ duration: 0.55, delay: i * 0.08 }}
-                className="group glass-card p-6 flex flex-col"
+                className="group glass-card p-6 flex flex-col hover:-translate-y-0.5 transition-transform"
               >
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-10 h-10 rounded-lg border border-border bg-surface flex items-center justify-center">
