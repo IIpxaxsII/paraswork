@@ -3,6 +3,7 @@ import { ArrowRight, Download, MessageSquare, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import parasCircularProfile from "@/assets/paras-circular-profile.png";
 import resumeAsset from "@/assets/resume.pdf.asset.json";
+import Typewriter from "./Typewriter";
 
 const Hero = () => {
   const scrollToSection = (id: string) => {
@@ -15,7 +16,6 @@ const Hero = () => {
       className="relative min-h-screen flex items-center px-4 pt-24 pb-16 overflow-hidden"
     >
       <div className="container mx-auto grid lg:grid-cols-[1.15fr_0.85fr] gap-12 items-center relative z-10">
-        {/* Left */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -29,7 +29,18 @@ const Hero = () => {
 
           <h1 className="font-display font-bold leading-[1.05] text-4xl sm:text-5xl lg:text-6xl xl:text-7xl">
             <span className="block text-foreground">Paras Bindra</span>
-            <span className="block gradient-text mt-2">Applied AI Engineer</span>
+            <span className="block mt-3 min-h-[1.2em]">
+              <Typewriter
+                phrases={[
+                  "Applied AI Engineer",
+                  "Building Intelligent Systems",
+                  "RAG & Retrieval Systems",
+                  "Machine Learning Engineer",
+                  "AI Product Builder",
+                  "Data Science Practitioner",
+                ]}
+              />
+            </span>
           </h1>
 
           <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto lg:mx-0 leading-relaxed">
@@ -75,7 +86,6 @@ const Hero = () => {
           </div>
         </motion.div>
 
-        {/* Right — photo */}
         <motion.div
           initial={{ opacity: 0, scale: 0.92 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -92,10 +102,6 @@ const Hero = () => {
                   className="w-full h-full rounded-full object-cover"
                 />
               </div>
-            </div>
-            <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full text-xs font-medium bg-surface/90 border border-border backdrop-blur">
-              <span className="text-ai-cyan">●</span>{" "}
-              <span className="text-foreground/90">B.Tech CSE · CGPA 8.5</span>
             </div>
           </div>
         </motion.div>
