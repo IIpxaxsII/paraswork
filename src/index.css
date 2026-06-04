@@ -142,3 +142,8 @@
     @apply text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight;
   }
 }
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
