@@ -5,7 +5,67 @@
 /* Applied AI Engineer — premium dark design system. All colors HSL. */
 
 @layer base {
+  /* LIGHT — premium ivory / slate */
   :root {
+    --background: 220 30% 98%;
+    --foreground: 225 30% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 225 30% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 225 30% 12%;
+
+    --primary: 265 80% 58%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 90% 55%;
+    --secondary-foreground: 0 0% 100%;
+
+    --accent: 190 85% 42%;
+    --accent-foreground: 0 0% 100%;
+
+    --muted: 220 20% 94%;
+    --muted-foreground: 225 15% 40%;
+
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 18% 88%;
+    --input: 220 18% 92%;
+    --ring: 265 80% 58%;
+
+    --radius: 0.875rem;
+
+    --ai-violet: 265 80% 58%;
+    --ai-blue: 220 90% 55%;
+    --ai-cyan: 190 85% 42%;
+    --ai-violet-soft: 265 60% 80%;
+    --ai-cyan-soft: 190 60% 80%;
+
+    --surface: 220 25% 96%;
+    --surface-elevated: 0 0% 100%;
+    --darker-bg: 220 25% 94%;
+
+    --neon-purple: 265 80% 58%;
+    --neon-blue: 220 90% 55%;
+    --neon-cyan: 190 85% 42%;
+    --dark-bg: 220 30% 98%;
+    --card-bg: 0 0% 100%;
+    --glow-shadow: 265 80% 58% / 0.2;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 225 30% 12%;
+    --sidebar-primary: 265 80% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 20% 94%;
+    --sidebar-accent-foreground: 225 30% 12%;
+    --sidebar-border: 220 18% 88%;
+    --sidebar-ring: 265 80% 58%;
+  }
+
+  /* DARK — original premium dark palette (unchanged) */
+  .dark {
     --background: 225 25% 5%;
     --foreground: 210 30% 96%;
 
@@ -34,9 +94,6 @@
     --input: 225 18% 12%;
     --ring: 265 90% 65%;
 
-    --radius: 0.875rem;
-
-    /* AI palette */
     --ai-violet: 265 90% 65%;
     --ai-blue: 220 95% 62%;
     --ai-cyan: 190 95% 60%;
@@ -47,7 +104,6 @@
     --surface-elevated: 225 20% 11%;
     --darker-bg: 225 28% 4%;
 
-    /* Legacy aliases (kept so any leftover refs don't blow up) */
     --neon-purple: 265 90% 65%;
     --neon-blue: 220 95% 62%;
     --neon-cyan: 190 95% 60%;
