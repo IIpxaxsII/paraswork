@@ -1,65 +1,52 @@
-# Portfolio Refinement Plan
+# ParxAI Mobile Responsiveness Fix
 
-Scope: polish only. No redesign. Preserve EmailJS, GitHub/LinkedIn links, content, sections.
+Scope: only `ParxAI.tsx`, `ParxAIChat.tsx`, `ParxAILauncher.tsx`. Desktop/tablet layouts unchanged. No changes to colors, typography, content, or chat logic.
 
-## 1. Initial Scroll Fix
-- In `src/pages/Index.tsx`, on mount: `window.history.scrollRestoration = "manual"` and `window.scrollTo(0,0)`.
-- Audit for any auto-`scrollIntoView` on first render (none expected, but verify ParxAI/Contact effects).
+## 1. `ParxAI.tsx` — section container
+- Reduce vertical padding on mobile: `py-12 px-3 md:py-24 md:px-4`.
+- Replace fixed `h-[680px]` with responsive height: `h-[calc(100svh-8rem)] max-h-[640px] md:h-[680px] md:max-h-none` so the embedded chat fits within the mobile viewport using `svh` (dynamic viewport units) and never pushes the page.
+- Tighten header margin on mobile (`mb-6 md:mb-10`).
 
-## 2. Hero Cleanup + Typing Effect
-- `Hero.tsx`: remove the "B.Tech CSE · CGPA 8.5" pill beneath the photo. Keep only the image inside the gradient ring.
-- Replace static "Applied AI Engineer" subtitle with a typewriter component that rotates:
-  - Applied AI Engineer
-  - Building Intelligent Systems
-  - RAG & Retrieval Systems
-  - Machine Learning Engineer
-  - AI Product Builder
-  - Data Science Practitioner
-- Implementation: small inline hook (no new dependency). Fixed min-height to prevent layout shift. Blinking cursor via CSS.
-- Name "Paras Bindra" stays static.
+## 2. `ParxAIChat.tsx` — chat layout
+Keep desktop classes as-is; add mobile overrides only.
 
-## 3. Equalize Projects
-- `FeaturedProjects.tsx`: drop the flagship hero card. Render all 4 projects (Mobile Usage Trend Analysis, NeuroRAG, Age Prediction Pipeline, TripMate AI) in one equal grid (`md:grid-cols-2 lg:grid-cols-2` or `lg:grid-cols-4`). Same card style, same size. Keep descriptions, tech chips, GitHub links unchanged.
-- Section label can stay "Selected Work / Featured Projects".
+- Root: ensure `flex flex-col h-full min-h-0` so inner scroll works.
+- Header: reduce padding on mobile (`px-4 py-3 md:px-6 md:py-4`); shrink avatar to `w-9 h-9 md:w-10 md:h-10`.
+- Messages area:
+  - `flex-1 min-h-0 overflow-y-auto`
+  - Padding: `px-4 py-5 space-y-4 md:px-6 md:py-8 md:space-y-6`
+  - Remove the `min-h-[520px]` on mobile (only apply at `md:` and up) so the area shrinks to available space instead of forcing overflow.
+  - Bubbles: `max-w-[88%] md:max-w-[80%]` for user, `max-w-[92%] md:max-w-[85%]` for assistant; text size `text-sm md:text-[15px]`.
+- Suggested prompts (Option A — horizontal scroll on mobile):
+  - Wrap chips in a container: on mobile `flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1`, on `md:` revert to `flex-wrap gap-1.5 mx-0 px-0`.
+  - Add `whitespace-nowrap shrink-0` to chip buttons on mobile.
+  - Add a small utility `.no-scrollbar` in `index.css` (scoped util only, no design changes) to hide the scrollbar visually.
+- Input row:
+  - Footer padding: `px-3 py-3 md:px-6 md:py-4`; ensure it remains the last flex child so it's anchored at the bottom of the chat container.
+  - Input height: `h-11 md:h-12`, send button `h-11 w-11 md:h-12 md:w-12`, `gap-2` preserved so they never overlap.
+  - Add `inputMode="text"` and `autoComplete="off"`; keep existing focus behavior, but on mobile do not auto-focus on mount (auto-focus triggers keyboard + scroll jump). Gate the mount auto-focus with a `window.matchMedia('(min-width: 768px)').matches` check.
 
-## 4. Expand ParxAI (ChatGPT-style)
-- `ParxAI.tsx`: increase container max-width (`max-w-4xl`), chat area `min-h-[560px]` / `max-h-[70vh]`, larger padding, bigger message bubbles, more generous spacing.
-- Remove "Hardcoded answers" / "v1" subtitle. Replace with "Ask anything about Paras's work".
-- Slightly larger input (h-12), better placeholder, send button with icon.
-- Keep keyword logic in `src/lib/parxai.ts` (no functional change).
+## 3. `ParxAILauncher.tsx` — hide launcher when open / avoid overlap with section
+- Hide launcher button when the drawer is open (`open === true`) so it never sits over chat UI.
+- Hide the floating launcher when the user is within the `#parxai` section on mobile, using an `IntersectionObserver` on `#parxai` with a `useIsMobile()` check; on desktop keep current behavior.
+- Mobile launcher position: `bottom-4 right-4 h-12 w-12 md:bottom-6 md:right-6 md:h-14 md:w-14` so it doesn't crowd small screens.
+- Sheet content on mobile: keep `side="right" w-full`, add `h-[100svh]` and `flex flex-col` (already there); reduce internal padding override to `p-0` (already set). No desktop change.
 
-## 5. Floating ParxAI Launcher
-- New `src/components/ParxAILauncher.tsx`: fixed bottom-right circular button with subtle glow, ParxAI branding (Bot icon + label on hover).
-- Click → opens a Sheet/Drawer (use existing `components/ui/sheet.tsx`, right side, full-height on mobile) containing a reusable `<ParxAIChat/>` body.
-- Refactor: extract chat UI from `ParxAI.tsx` into `ParxAIChat.tsx` so both the section and the drawer reuse it. Section stays on page.
-- Mount launcher in `Index.tsx` (or `App.tsx`) so it shows on all routes.
+## 4. Tiny CSS addition
+In `src/index.css` (utilities layer), add:
+```css
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
+```
 
-## 6. Global Ambient AI Background
-- `AnimatedBackground.tsx`: enhance current radial glows into slow aurora mesh:
-  - 3–4 large blurred conic/radial gradient blobs with very slow `animate-drift` (60–80s), low opacity.
-  - Add a soft moving linear gradient overlay (8–12% opacity).
-  - Keep grid texture subtle; keep vignette.
-- Remains `fixed inset-0 -z-10`, already global via `Index.tsx`. Verify it visually covers all sections.
-- Reduce per-section local glow intensity slightly so global layer reads through.
+## Verification
+- Preview at 320 / 375 / 390 / 412 / 430 widths: chat fits viewport, input always visible, chips scroll horizontally, launcher hidden when section in view or drawer open.
+- Desktop (≥768px) visually identical to current.
 
-## 7. Contact Cleanup
-- `Contact.tsx`: remove direct email / mailto button + mail icon. Keep LinkedIn + GitHub buttons. Keep the EmailJS-powered form fully intact.
-
-## 8. Remove "Hardcoded" Language
-- Search and remove any "hardcoded", "demo", "mock" wording in ParxAI UI and labels.
-
-## 9. UX Polish Pass
-- Consistent hover lift (`hover:-translate-y-0.5`, soft glow) on project cards, capability cards, buttons.
-- Smoother section padding rhythm (`py-24` standard, ensure consistent).
-- Verify mobile responsiveness for new ParxAI size and floating launcher (safe-area bottom inset).
-
-## Files
-- Edit: `src/pages/Index.tsx`, `src/components/Hero.tsx`, `src/components/FeaturedProjects.tsx`, `src/components/ParxAI.tsx`, `src/components/AnimatedBackground.tsx`, `src/components/Contact.tsx`
-- Create: `src/components/ParxAIChat.tsx`, `src/components/ParxAILauncher.tsx`, `src/components/Typewriter.tsx` (or inline hook)
-
-## Preserved (untouched)
-- EmailJS service, template, public key, validation, toasts
-- GitHub URL `https://github.com/IIpxaxsII` on all projects
-- LinkedIn link
-- `src/lib/parxai.ts` knowledge base logic
-- Color tokens / visual identity / section structure
+## Files touched
+- `src/components/ParxAI.tsx`
+- `src/components/ParxAIChat.tsx`
+- `src/components/ParxAILauncher.tsx`
+- `src/index.css` (single utility class only)
