@@ -1,52 +1,75 @@
-# ParxAI Mobile Responsiveness Fix
+# Add Light/Dark Theme Toggle
 
-Scope: only `ParxAI.tsx`, `ParxAIChat.tsx`, `ParxAILauncher.tsx`. Desktop/tablet layouts unchanged. No changes to colors, typography, content, or chat logic.
+Scope: theming infrastructure + a polished light palette + a toggle in the navbar. No content, layout, or functionality changes.
 
-## 1. `ParxAI.tsx` — section container
-- Reduce vertical padding on mobile: `py-12 px-3 md:py-24 md:px-4`.
-- Replace fixed `h-[680px]` with responsive height: `h-[calc(100svh-8rem)] max-h-[640px] md:h-[680px] md:max-h-none` so the embedded chat fits within the mobile viewport using `svh` (dynamic viewport units) and never pushes the page.
-- Tighten header margin on mobile (`mb-6 md:mb-10`).
+## 1. Tailwind dark-mode setup
+- `tailwind.config.ts` already has `darkMode: ["class"]`. Keep it.
+- Strategy: define the **light** palette under `:root` and the **dark** palette under `.dark`. Add `class="dark"` to `<html>` by default to preserve the current dark experience.
 
-## 2. `ParxAIChat.tsx` — chat layout
-Keep desktop classes as-is; add mobile overrides only.
+## 2. `src/index.css` — dual palettes
+- Move current dark token block from `:root` into `.dark { ... }` unchanged (so today's dark theme is byte-identical).
+- Add a new `:root { ... }` block with a premium light palette built on the same token names so every component themes automatically:
+  - `--background: 220 30% 98%` (soft ivory)
+  - `--foreground: 225 30% 12%` (deep slate)
+  - `--card: 0 0% 100%`, `--card-foreground: 225 30% 12%`
+  - `--popover` same as card
+  - `--muted: 220 20% 94%`, `--muted-foreground: 225 15% 40%`
+  - `--border: 220 18% 88%`, `--input: 220 18% 92%`
+  - `--primary: 265 80% 58%` (violet stays the brand), `--primary-foreground: 0 0% 100%`
+  - `--secondary: 220 90% 55%`, `--accent: 190 85% 45%`
+  - `--ring: 265 80% 58%`
+  - AI palette (`--ai-violet`, `--ai-blue`, `--ai-cyan`) kept at the same hues but slightly deeper saturation for contrast on light surfaces.
+  - `--surface: 220 25% 96%`, `--surface-elevated: 0 0% 100%`, `--darker-bg: 220 25% 94%`
+  - Sidebar tokens mirrored.
+- Add smooth transitions globally:
+  ```css
+  body { transition: background-color .4s ease, color .4s ease; }
+  *, *::before, *::after {
+    transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+    transition-duration: .3s;
+    transition-timing-function: ease;
+  }
+  ```
+  (No transition on `transform`/`opacity` to avoid interfering with Framer Motion.)
+- Tweak `.glass-card` so the light variant uses brighter surfaces with softer shadow and a subtle border — single rule using tokens, so no per-mode override needed. Same for `.ai-glow` (reduce shadow alpha when on light bg by tying it to `--ai-violet` opacity which already works).
+- Adjust `AnimatedBackground` blob opacities so they don't wash out the light theme: change blur layers to use Tailwind's `dark:` variants (e.g., `bg-ai-violet/10 dark:bg-ai-violet/25`) and dim the grid texture (`opacity-[0.06] dark:opacity-[0.04]`). Pure additive class changes, no structural edits.
 
-- Root: ensure `flex flex-col h-full min-h-0` so inner scroll works.
-- Header: reduce padding on mobile (`px-4 py-3 md:px-6 md:py-4`); shrink avatar to `w-9 h-9 md:w-10 md:h-10`.
-- Messages area:
-  - `flex-1 min-h-0 overflow-y-auto`
-  - Padding: `px-4 py-5 space-y-4 md:px-6 md:py-8 md:space-y-6`
-  - Remove the `min-h-[520px]` on mobile (only apply at `md:` and up) so the area shrinks to available space instead of forcing overflow.
-  - Bubbles: `max-w-[88%] md:max-w-[80%]` for user, `max-w-[92%] md:max-w-[85%]` for assistant; text size `text-sm md:text-[15px]`.
-- Suggested prompts (Option A — horizontal scroll on mobile):
-  - Wrap chips in a container: on mobile `flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1`, on `md:` revert to `flex-wrap gap-1.5 mx-0 px-0`.
-  - Add `whitespace-nowrap shrink-0` to chip buttons on mobile.
-  - Add a small utility `.no-scrollbar` in `index.css` (scoped util only, no design changes) to hide the scrollbar visually.
-- Input row:
-  - Footer padding: `px-3 py-3 md:px-6 md:py-4`; ensure it remains the last flex child so it's anchored at the bottom of the chat container.
-  - Input height: `h-11 md:h-12`, send button `h-11 w-11 md:h-12 md:w-12`, `gap-2` preserved so they never overlap.
-  - Add `inputMode="text"` and `autoComplete="off"`; keep existing focus behavior, but on mobile do not auto-focus on mount (auto-focus triggers keyboard + scroll jump). Gate the mount auto-focus with a `window.matchMedia('(min-width: 768px)').matches` check.
+## 3. Theme provider
+- Create `src/hooks/use-theme.tsx` exporting `ThemeProvider` (context) + `useTheme()`:
+  - State: `"light" | "dark"`.
+  - On mount: read `localStorage.getItem("paras-theme")`; if missing, default to `"dark"` (preserves current default; no system-pref switching to avoid surprise).
+  - Effect: toggle `document.documentElement.classList` between `dark` and persists to `localStorage`.
+  - Set `<meta name="color-scheme">` accordingly.
+- Wrap `<App />` in `src/App.tsx` (or `main.tsx`) with `<ThemeProvider>`.
+- Add an inline pre-hydration script in `index.html` `<head>` to set the class before paint (prevents flash):
+  ```html
+  <script>
+    (function(){try{var t=localStorage.getItem('paras-theme')||'dark';
+    document.documentElement.classList.toggle('dark',t==='dark');}catch(e){
+    document.documentElement.classList.add('dark');}})();
+  </script>
+  ```
 
-## 3. `ParxAILauncher.tsx` — hide launcher when open / avoid overlap with section
-- Hide launcher button when the drawer is open (`open === true`) so it never sits over chat UI.
-- Hide the floating launcher when the user is within the `#parxai` section on mobile, using an `IntersectionObserver` on `#parxai` with a `useIsMobile()` check; on desktop keep current behavior.
-- Mobile launcher position: `bottom-4 right-4 h-12 w-12 md:bottom-6 md:right-6 md:h-14 md:w-14` so it doesn't crowd small screens.
-- Sheet content on mobile: keep `side="right" w-full`, add `h-[100svh]` and `flex flex-col` (already there); reduce internal padding override to `p-0` (already set). No desktop change.
+## 4. Toggle component
+- New `src/components/ThemeToggle.tsx`: circular icon button (Sun/Moon from lucide-react) with smooth rotate/scale crossfade between icons. Uses `useTheme()`. ARIA label + `title`.
+- Inserted in `Navigation.tsx`:
+  - Desktop: between the nav item list and the "Hire Me" button.
+  - Mobile: next to the hamburger button (visible at all times, not only when menu open) so users can switch theme on small screens.
+- Styling: `h-9 w-9 rounded-full border border-border bg-surface/60 hover:border-ai-violet/50 hover:text-ai-violet`. Matches existing design language.
 
-## 4. Tiny CSS addition
-In `src/index.css` (utilities layer), add:
-```css
-@layer utilities {
-  .no-scrollbar::-webkit-scrollbar { display: none; }
-  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-}
-```
-
-## Verification
-- Preview at 320 / 375 / 390 / 412 / 430 widths: chat fits viewport, input always visible, chips scroll horizontally, launcher hidden when section in view or drawer open.
-- Desktop (≥768px) visually identical to current.
+## 5. Verification
+- Toggle in nav switches palette site-wide (Hero, About, Capabilities, Projects, ParxAI, ParxAILauncher, Contact, Footer) — all already use semantic tokens, so they update automatically.
+- Refresh persists choice. No flash on reload.
+- Mobile (`390px`) nav still fits with the extra toggle button.
+- Dark mode visually unchanged from current.
 
 ## Files touched
-- `src/components/ParxAI.tsx`
-- `src/components/ParxAIChat.tsx`
-- `src/components/ParxAILauncher.tsx`
-- `src/index.css` (single utility class only)
+- `index.html` (pre-hydration script)
+- `src/index.css` (split palettes, transitions)
+- `src/App.tsx` (wrap with ThemeProvider)
+- `src/components/Navigation.tsx` (mount toggle, desktop + mobile)
+- `src/components/AnimatedBackground.tsx` (light-mode opacities via `dark:` variants)
+- New: `src/hooks/use-theme.tsx`
+- New: `src/components/ThemeToggle.tsx`
+
+Not touched: ParxAI logic, EmailJS, GitHub/LinkedIn links, routing, content, structure.
