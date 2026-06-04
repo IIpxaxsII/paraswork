@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
+import ThemeToggle from "./ThemeToggle";
 
 const navItems = [
   { id: "home", label: "Home" },
@@ -71,15 +72,17 @@ const Navigation = () => {
                 {item.label}
               </button>
             ))}
+            <ThemeToggle className="ml-2" />
             <button
               onClick={() => scrollToSection("contact")}
-              className="ml-3 px-4 py-2 rounded-md text-sm font-semibold text-primary-foreground bg-gradient-to-r from-ai-violet to-ai-blue hover:shadow-[0_0_30px_hsl(var(--ai-violet)/0.45)] transition-shadow"
+              className="ml-2 px-4 py-2 rounded-md text-sm font-semibold text-primary-foreground bg-gradient-to-r from-ai-violet to-ai-blue hover:shadow-[0_0_30px_hsl(var(--ai-violet)/0.45)] transition-shadow"
             >
               Hire Me
             </button>
           </div>
 
-          <div className="md:hidden">
+          <div className="md:hidden flex items-center gap-2">
+            <ThemeToggle />
             <button
               onClick={() => setIsOpen(!isOpen)}
               className="text-foreground hover:text-ai-violet transition-colors"
