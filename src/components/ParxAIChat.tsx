@@ -29,7 +29,10 @@ const ParxAIChat = ({ compact = false }: ParxAIChatProps) => {
   }, [messages, thinking]);
 
   useEffect(() => {
-    inputRef.current?.focus();
+    // Avoid focusing on mount on mobile (prevents keyboard popping + scroll jump)
+    if (typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches) {
+      inputRef.current?.focus();
+    }
   }, []);
 
   const send = (text: string) => {
@@ -42,14 +45,16 @@ const ParxAIChat = ({ compact = false }: ParxAIChatProps) => {
       const res = answer(q);
       setMessages((m) => [...m, { role: "assistant", content: res.text }]);
       setThinking(false);
-      inputRef.current?.focus();
+      if (typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches) {
+        inputRef.current?.focus();
+      }
     }, 500);
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-surface/60">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-ai-violet to-ai-cyan flex items-center justify-center">
+    <div className="flex flex-col h-full min-h-0">
+      <div className="flex items-center gap-3 px-4 py-3 md:px-6 md:py-4 border-b border-border bg-surface/60">
+        <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-ai-violet to-ai-cyan flex items-center justify-center">
           <Bot className="w-5 h-5 text-primary-foreground" />
         </div>
         <div className="flex-1">
@@ -65,8 +70,8 @@ const ParxAIChat = ({ compact = false }: ParxAIChatProps) => {
       </div>
 
       <div
-        className={`flex-1 overflow-y-auto px-6 py-8 space-y-6 ${
-          compact ? "" : "min-h-[520px]"
+        className={`flex-1 min-h-0 overflow-y-auto px-4 py-5 space-y-4 md:px-6 md:py-8 md:space-y-6 ${
+          compact ? "" : "md:min-h-[520px]"
         }`}
       >
         {messages.map((m, i) => (
@@ -82,8 +87,8 @@ const ParxAIChat = ({ compact = false }: ParxAIChatProps) => {
             <div
               className={
                 m.role === "user"
-                  ? "max-w-[80%] px-4 py-3 rounded-2xl rounded-tr-sm bg-gradient-to-br from-ai-violet to-ai-blue text-primary-foreground text-sm leading-relaxed"
-                  : "max-w-[85%] text-[15px] text-foreground/90 leading-relaxed pt-1"
+                  ? "max-w-[88%] md:max-w-[80%] px-4 py-3 rounded-2xl rounded-tr-sm bg-gradient-to-br from-ai-violet to-ai-blue text-primary-foreground text-sm leading-relaxed"
+                  : "max-w-[92%] md:max-w-[85%] text-sm md:text-[15px] text-foreground/90 leading-relaxed pt-1"
               }
             >
               {m.content}
@@ -116,13 +121,13 @@ const ParxAIChat = ({ compact = false }: ParxAIChatProps) => {
         <div ref={endRef} />
       </div>
 
-      <div className="px-6 py-4 border-t border-border bg-surface/40">
-        <div className="flex flex-wrap gap-1.5 mb-3">
+      <div className="px-3 py-3 md:px-6 md:py-4 border-t border-border bg-surface/40">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-3 px-3 pb-1 mb-2 md:flex-wrap md:gap-1.5 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:mb-3">
           {SUGGESTED_PROMPTS.slice(0, compact ? 3 : 5).map((p) => (
             <button
               key={p}
               onClick={() => send(p)}
-              className="chip hover:border-ai-violet/50 hover:text-foreground transition-colors"
+              className="chip whitespace-nowrap shrink-0 md:whitespace-normal md:shrink hover:border-ai-violet/50 hover:text-foreground transition-colors"
             >
               {p}
             </button>
@@ -139,13 +144,15 @@ const ParxAIChat = ({ compact = false }: ParxAIChatProps) => {
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask ParxAI anything about Paras…"
-            className="flex-1 h-12 px-4 rounded-lg bg-background border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:border-ai-violet/50 focus:ring-2 focus:ring-ai-violet/20 transition-all"
+            placeholder="Ask ParxAI anything…"
+            inputMode="text"
+            autoComplete="off"
+            className="flex-1 min-w-0 h-11 md:h-12 px-4 rounded-lg bg-background border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:border-ai-violet/50 focus:ring-2 focus:ring-ai-violet/20 transition-all"
           />
           <button
             type="submit"
             disabled={!input.trim() || thinking}
-            className="h-12 w-12 rounded-lg bg-gradient-to-r from-ai-violet to-ai-blue text-primary-foreground font-semibold flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-[0_0_25px_hsl(var(--ai-violet)/0.4)] transition-shadow"
+            className="h-11 w-11 md:h-12 md:w-12 shrink-0 rounded-lg bg-gradient-to-r from-ai-violet to-ai-blue text-primary-foreground font-semibold flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-[0_0_25px_hsl(var(--ai-violet)/0.4)] transition-shadow"
             aria-label="Send"
           >
             <Send className="w-4 h-4" />
