@@ -1,4 +1,4 @@
-import { Github, Linkedin, Mail } from "lucide-react";
+import { Github, Linkedin } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -26,13 +26,6 @@ const Footer = () => {
             className="w-9 h-9 rounded-md border border-border bg-surface flex items-center justify-center hover:border-ai-violet/40 hover:text-ai-violet transition-colors"
           >
             <Linkedin className="w-4 h-4" />
-          </a>
-          <a
-            href="mailto:parasbindra22@gmail.com"
-            aria-label="Email"
-            className="w-9 h-9 rounded-md border border-border bg-surface flex items-center justify-center hover:border-ai-violet/40 hover:text-ai-violet transition-colors"
-          >
-            <Mail className="w-4 h-4" />
           </a>
         </div>
         <p className="text-xs text-muted-foreground">
