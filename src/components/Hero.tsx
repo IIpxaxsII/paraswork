@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import parasCircularProfile from "@/assets/paras-circular-profile.png";
 import resumeAsset from "@/assets/resume.pdf.asset.json";
 import Typewriter from "./Typewriter";
+import NeuralNetworkBackground from "./NeuralNetworkBackground";
 
 const Hero = () => {
   const scrollToSection = (id: string) => {
@@ -15,6 +16,7 @@ const Hero = () => {
       id="home"
       className="relative min-h-screen flex items-center px-4 pt-24 pb-16 overflow-hidden"
     >
+      <NeuralNetworkBackground />
       <div className="container mx-auto grid lg:grid-cols-[1.15fr_0.85fr] gap-12 items-center relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
