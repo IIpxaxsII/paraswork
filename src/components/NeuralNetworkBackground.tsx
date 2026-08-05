@@ -1,39 +1,62 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Ambient neural network for the hero section.
- * Canvas-rendered, GPU-friendly, zero DOM churn.
- * Evolves slowly: organic node drift, dynamic connect/disconnect,
- * occasional data pulses, subtle cursor response, scroll dissolve.
+ * Ambient "thinking model" behind the hero.
+ * A living computation graph — clustered feature spaces, weighted
+ * synapses, information packets propagating like inference, and
+ * glacial self-reorganization. It should read as a model quietly
+ * thinking, never as a particle field. Canvas-rendered, zero DOM churn.
  */
 
 const TAU = Math.PI * 2;
 
 interface NetNode {
-  bx: number; by: number;      // base (cluster) position
-  x: number; y: number;        // drift position
-  fx: number; fy: number;      // final position (drift + cursor offset)
-  ox: number; oy: number;      // cursor repel offset (spring-smoothed)
+  cluster: number;          // cluster index, -1 = isolated feature node
+  lx: number; ly: number;   // local offset inside the cluster
+  bx: number; by: number;   // base position (isolated nodes)
+  x: number; y: number;     // base position after cluster transform
+  fx: number; fy: number;   // final position (drift + cursor offset)
+  ox: number; oy: number;   // cursor repel offset (spring-smoothed)
   ax1: number; ax2: number; ay1: number; ay2: number; // drift amplitudes
   w1: number; w2: number; w3: number; w4: number;     // angular frequencies
   p1: number; p2: number; p3: number; p4: number;     // phases
-  r: number;                   // radius (1–1.5 => 2–3px dots)
-  a: number;                   // base alpha
-  c: number;                   // palette index: 0 violet, 1 blue, 2 cyan
-  degree: number;              // target connection count (2–4)
+  r: number;                // radius (1–1.5 => 2–3px dots)
+  a: number;                // base alpha
+  c: number;                // palette index: 0 violet, 1 blue, 2 cyan
+  act: number;              // computation flash 0..1 (decays ~400ms)
+  birth: number;            // fade-in 0..1
+  death: number;            // fade-out 1..0
+  dying: boolean;
 }
 
 interface NetEdge {
   a: number;
   b: number;
-  bridge: boolean;             // long-range sparse connection
-  alpha: number;
+  w: number;                // synapse weight 0..1 — strong = brighter, thicker, persistent
+  bridge: boolean;          // inter-cluster pathway, never pruned
+  grow: number;             // 0..1 growth animation (new connections grow in slowly)
+  dying: boolean;
 }
 
-interface NetPulse {
+interface Cluster {
+  x: number; y: number;     // center
+  minX: number; maxX: number; // soft horizontal bounds (its stage)
+  rot: number; rotV: number;  // glacial rotation
+  scale: number; scaleBase: number; scaleAmp: number; scaleW: number; scaleP: number;
+  vx: number; vy: number;     // glacial center drift
+  radius: number;
+  stage: number;
+}
+
+interface Packet {
   edge: NetEdge;
-  t: number;                   // 0..1 progress along the edge
+  dir: 1 | -1;              // 1: a→b, -1: b→a
+  t: number;                // 0..1 progress along the edge
   dur: number;
+  hops: number;
+  maxHops: number;
+  c: number;                // palette index
+  dead: boolean;
 }
 
 interface Palette {
@@ -72,7 +95,10 @@ const NeuralNetworkBackground = () => {
     let H = 0;
     let nodes: NetNode[] = [];
     let edges: NetEdge[] = [];
-    let pulses: NetPulse[] = [];
+    let clusters: Cluster[] = [];
+    let packets: Packet[] = [];
+    let pairSet = new Set<number>();
+    let maxNodes = 0;
     let palette = readPalette();
 
     let raf = 0;
@@ -80,20 +106,23 @@ const NeuralNetworkBackground = () => {
     let inView = true;
     let lastT = 0;
     let startT = 0;
-    let edgeTimer = 0;
-    let pulseTimer = 0;
-    let nextPulseIn = rand(2, 4);
+    let learnTimer = 0;
+    let nextLearnIn = rand(2.2, 3.4);
+    let spawnTimer = 0;
+    let nextSpawnIn = rand(1.2, 2.8);
 
     const mouse = { cx: 0, cy: 0, gx: 0, gy: 0, inside: false, glow: 0 };
 
     const rawOf = (c: number) => (c === 0 ? palette.v : c === 1 ? palette.b : palette.c);
     const connectRadius = () => Math.min(W, H) * 0.16;
-
-    // Density gradient: near-empty left (text), peak near the portrait, fade far right.
-    const densityAt = (u: number) => {
-      const peak = Math.exp(-((u - 0.72) ** 2) / (2 * 0.17 ** 2));
-      const rightFade = u > 0.88 ? Math.max(0.25, 1 - (u - 0.88) * 4) : 1;
-      return (0.1 + 0.9 * peak) * rightFade;
+    const pairKey = (a: number, b: number) => Math.min(a, b) * 4096 + Math.max(a, b);
+    const hasEdge = (a: number, b: number) => pairSet.has(pairKey(a, b));
+    const edgeLen = (e: NetEdge) =>
+      Math.hypot(nodes[e.a].fx - nodes[e.b].fx, nodes[e.a].fy - nodes[e.b].fy);
+    const degree = (i: number) => {
+      let d = 0;
+      for (const e of edges) if (e.a === i || e.b === i) d++;
+      return d;
     };
 
     const resize = () => {
@@ -105,150 +134,279 @@ const NeuralNetworkBackground = () => {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
 
-    const generate = () => {
-      const count = clamp(Math.round((W * H) / 8000), 70, 170);
+    // ---- graph construction ------------------------------------------------
 
-      // Organic clusters, weighted by the density gradient.
-      const clusters: { x: number; y: number }[] = [];
-      let guard = 0;
-      while (clusters.length < 7 && guard++ < 600) {
-        const u = Math.random();
-        if (Math.random() < densityAt(u)) {
-          clusters.push({ x: u * W, y: rand(0.1, 0.9) * H });
-        }
-      }
-      if (!clusters.length) clusters.push({ x: W * 0.72, y: H * 0.5 });
-
-      nodes = [];
-      for (let i = 0; i < count; i++) {
-        let x: number;
-        let y: number;
-        if (Math.random() < 0.82) {
-          const c = clusters[Math.floor(Math.random() * clusters.length)];
-          const s = Math.min(W, H) * rand(0.06, 0.13);
-          x = c.x + gauss() * s;
-          y = c.y + gauss() * s;
-        } else {
-          let u = Math.random();
-          let g2 = 0;
-          while (Math.random() > densityAt(u) && g2++ < 60) u = Math.random();
-          x = u * W;
-          y = Math.random() * H;
-        }
-        x = clamp(x, 16, W - 16);
-        y = clamp(y, 16, H - 16);
-
-        const amp = rand(5, 12); // total drift distance, split across two sines per axis
-        nodes.push({
-          bx: x, by: y, x, y, fx: x, fy: y, ox: 0, oy: 0,
-          ax1: amp * rand(0.35, 0.65), ax2: amp * rand(0.3, 0.5),
-          ay1: amp * rand(0.35, 0.65), ay2: amp * rand(0.3, 0.5),
-          w1: TAU / rand(15, 30), w2: TAU / rand(15, 30),
-          w3: TAU / rand(15, 30), w4: TAU / rand(15, 30),
-          p1: rand(0, TAU), p2: rand(0, TAU), p3: rand(0, TAU), p4: rand(0, TAU),
-          r: rand(1, 1.5),
-          a: rand(0.15, 0.2),
-          c: Math.random() < 0.15 ? 2 : Math.random() < 0.5 ? 0 : 1,
-          degree: 2 + Math.floor(Math.random() * 3),
-        });
-      }
-
-      // A few long-range bridges between distant clusters.
-      edges = [];
-      const Rc = connectRadius();
-      const bridgeTarget = 6 + Math.floor(Math.random() * 4);
-      let tries = 0;
-      while (edges.length < bridgeTarget && tries++ < 250) {
-        const a = Math.floor(Math.random() * nodes.length);
-        const b = Math.floor(Math.random() * nodes.length);
-        if (a === b) continue;
-        const d = Math.hypot(nodes[a].bx - nodes[b].bx, nodes[a].by - nodes[b].by);
-        if (d > Rc * 1.7 && d < Rc * 4) {
-          edges.push({ a, b, bridge: true, alpha: rand(0.04, 0.06) });
-        }
-      }
-      pulses = [];
+    const makeNode = (cluster: number, lx: number, ly: number, bx: number, by: number, birth = 1): number => {
+      const amp = rand(2, 5); // nodes drift only a few pixels
+      nodes.push({
+        cluster, lx, ly, bx, by, x: bx, y: by, fx: bx, fy: by, ox: 0, oy: 0,
+        ax1: amp * rand(0.35, 0.65), ax2: amp * rand(0.3, 0.5),
+        ay1: amp * rand(0.35, 0.65), ay2: amp * rand(0.3, 0.5),
+        w1: TAU / rand(15, 30), w2: TAU / rand(15, 30),
+        w3: TAU / rand(15, 30), w4: TAU / rand(15, 30),
+        p1: rand(0, TAU), p2: rand(0, TAU), p3: rand(0, TAU), p4: rand(0, TAU),
+        r: rand(1, 1.5),
+        a: rand(0.15, 0.2),
+        c: Math.random() < 0.15 ? 2 : Math.random() < 0.5 ? 0 : 1,
+        act: 0, birth, death: 1, dying: false,
+      });
+      return nodes.length - 1;
     };
 
-    // Re-evaluate connections using a uniform spatial grid.
-    const updateEdges = () => {
-      const Rc = connectRadius();
-      const Rd = Rc * 1.3; // hysteresis: disconnect beyond this
+    const addEdge = (a: number, b: number, w: number, bridge: boolean, grow = 1): NetEdge | null => {
+      if (a === b || hasEdge(a, b)) return null;
+      pairSet.add(pairKey(a, b));
+      const e: NetEdge = { a, b, w, bridge, grow, dying: false };
+      edges.push(e);
+      return e;
+    };
 
-      edges = edges.filter((e) => {
-        if (e.bridge) return true;
-        const A = nodes[e.a];
-        const B = nodes[e.b];
-        return Math.hypot(A.fx - B.fx, A.fy - B.fy) < Rd;
+    const removeEdge = (e: NetEdge) => {
+      const i = edges.indexOf(e);
+      if (i >= 0) edges.splice(i, 1);
+      pairSet.delete(pairKey(e.a, e.b));
+    };
+
+    const makeCluster = (stage: number, u0: number, u1: number, count: number, radius: number) => {
+      const cx = rand(u0 + 0.03, u1 - 0.03) * W;
+      const cy = rand(0.18, 0.82) * H;
+      const ci = clusters.length;
+      clusters.push({
+        x: cx, y: cy,
+        minX: u0 * W, maxX: u1 * W,
+        rot: rand(0, TAU), rotV: rand(0.004, 0.012) * (Math.random() < 0.5 ? -1 : 1),
+        scale: 1, scaleBase: 1, scaleAmp: rand(0.05, 0.1),
+        scaleW: TAU / rand(35, 70), scaleP: rand(0, TAU),
+        vx: rand(1, 4) * (Math.random() < 0.5 ? -1 : 1),
+        vy: rand(0.6, 2.4) * (Math.random() < 0.5 ? -1 : 1),
+        radius, stage,
+      });
+      const first = nodes.length;
+      for (let i = 0; i < count; i++) {
+        const lx = gauss() * radius;
+        const ly = gauss() * radius;
+        makeNode(ci, lx, ly, cx + lx, cy + ly);
+      }
+      return { ci, first, count };
+    };
+
+    const generate = () => {
+      const k = clamp((W * H) / (1440 * 900), 0.55, 1.35);
+      const S = Math.min(W, H);
+      clusters = [];
+      nodes = [];
+      edges = [];
+      pairSet = new Set();
+      packets = [];
+
+      // Five implied stages: feature clusters → hidden representations →
+      // attention → feature fusion → outputs. Never drawn as layers —
+      // the hierarchy exists only in the topology.
+      const stageDefs = [
+        { u0: 0.10, u1: 0.30, dense: 2, medium: 0 }, // learned features
+        { u0: 0.30, u1: 0.50, dense: 0, medium: 2 }, // hidden representations
+        { u0: 0.50, u1: 0.72, dense: 1, medium: 1 }, // attention (dense, near portrait)
+        { u0: 0.70, u1: 0.86, dense: 0, medium: 1 }, // feature fusion
+      ];
+      const byStage: { ci: number; first: number; count: number }[][] = [];
+
+      stageDefs.forEach((def, s) => {
+        const made: { ci: number; first: number; count: number }[] = [];
+        for (let i = 0; i < def.dense; i++) {
+          made.push(makeCluster(s, def.u0, def.u1, Math.round(rand(7, 10) * k), S * rand(0.035, 0.055)));
+        }
+        for (let i = 0; i < def.medium; i++) {
+          made.push(makeCluster(s, def.u0, def.u1, Math.round(rand(5, 8) * k), S * rand(0.06, 0.1)));
+        }
+        byStage.push(made);
       });
 
-      // Slowly retire random edges so the graph keeps reconfiguring.
-      if (Math.random() < 0.35) {
-        const removable: number[] = [];
-        edges.forEach((e, i) => { if (!e.bridge) removable.push(i); });
-        if (removable.length > 40) {
-          edges.splice(removable[Math.floor(Math.random() * removable.length)], 1);
+      // Intra-cluster synapses: strong, connect each node to its 2 nearest peers.
+      for (const { first, count } of byStage.flat()) {
+        for (let i = first; i < first + count; i++) {
+          const others: { j: number; d: number }[] = [];
+          for (let j = first; j < first + count; j++) {
+            if (j === i) continue;
+            others.push({ j, d: Math.hypot(nodes[j].bx - nodes[i].bx, nodes[j].by - nodes[i].by) });
+          }
+          others.sort((p, q) => p.d - q.d);
+          for (const { j } of others.slice(0, 2)) addEdge(i, j, rand(0.55, 0.95), false);
         }
       }
 
-      const deg = new Array<number>(nodes.length).fill(0);
-      const pairs = new Set<number>();
-      edges.forEach((e) => {
-        deg[e.a]++;
-        deg[e.b]++;
-        pairs.add(Math.min(e.a, e.b) * 1000 + Math.max(e.a, e.b));
-      });
-
-      // Build spatial grid.
-      const cell = Rc;
-      const cols = Math.max(1, Math.ceil(W / cell));
-      const grid = new Map<number, number[]>();
-      nodes.forEach((n, i) => {
-        const k = Math.floor(n.fx / cell) + Math.floor(n.fy / cell) * cols;
-        const arr = grid.get(k);
-        if (arr) arr.push(i);
-        else grid.set(k, [i]);
-      });
-
-      // Randomized order keeps growth organic.
-      const order = nodes.map((_, i) => i);
-      for (let i = order.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [order[i], order[j]] = [order[j], order[i]];
-      }
-
-      for (const i of order) {
-        if (deg[i] >= nodes[i].degree) continue;
-        const n = nodes[i];
-        const cx = Math.floor(n.fx / cell);
-        const cy = Math.floor(n.fy / cell);
-        const candidates: { j: number; d: number }[] = [];
-        for (let gx = cx - 1; gx <= cx + 1; gx++) {
-          for (let gy = cy - 1; gy <= cy + 1; gy++) {
-            const arr = grid.get(gx + gy * cols);
-            if (!arr) continue;
-            for (const j of arr) {
-              if (j === i || deg[j] >= 4) continue;
-              const key = Math.min(i, j) * 1000 + Math.max(i, j);
-              if (pairs.has(key)) continue;
-              const d = Math.hypot(n.fx - nodes[j].fx, n.fy - nodes[j].fy);
-              if (d > 1 && d < Rc) candidates.push({ j, d });
+      // Forward pathways: each cluster wires into the nearest cluster of the
+      // next stage — persistent bridges that carry most of the inference flow.
+      for (let s = 0; s < byStage.length - 1; s++) {
+        for (const from of byStage[s]) {
+          let best: { ci: number; first: number; count: number } | null = null;
+          let bestD = Infinity;
+          for (const to of byStage[s + 1]) {
+            const d = Math.hypot(clusters[to.ci].x - clusters[from.ci].x, clusters[to.ci].y - clusters[from.ci].y);
+            if (d < bestD) { bestD = d; best = to; }
+          }
+          if (!best) continue;
+          const pairs: { a: number; b: number; d: number }[] = [];
+          for (let i = from.first; i < from.first + from.count; i++) {
+            for (let j = best.first; j < best.first + best.count; j++) {
+              pairs.push({ a: i, b: j, d: Math.hypot(nodes[j].bx - nodes[i].bx, nodes[j].by - nodes[i].by) });
             }
           }
-        }
-        candidates.sort((p, q) => p.d - q.d);
-        for (const { j } of candidates) {
-          if (deg[i] >= nodes[i].degree || deg[j] >= 4) break;
-          const key = Math.min(i, j) * 1000 + Math.max(i, j);
-          pairs.add(key);
-          deg[i]++;
-          deg[j]++;
-          edges.push({ a: i, b: j, bridge: false, alpha: rand(0.05, 0.1) });
+          pairs.sort((p, q) => p.d - q.d);
+          let linked = 0;
+          for (const p of pairs) {
+            if (linked >= 2) break;
+            if (addEdge(p.a, p.b, rand(0.5, 0.8), true)) linked++;
+          }
+          // Occasional skip connection two stages ahead (residual-like).
+          if (s + 2 < byStage.length && byStage[s + 2].length && Math.random() < 0.6) {
+            const to = byStage[s + 2][Math.floor(Math.random() * byStage[s + 2].length)];
+            const a = from.first + Math.floor(Math.random() * from.count);
+            const b = to.first + Math.floor(Math.random() * to.count);
+            addEdge(a, b, rand(0.25, 0.45), false);
+          }
         }
       }
+
+      // Output representations: a few isolated feature nodes on the far right.
+      const outputs = 2 + Math.floor(Math.random() * 2);
+      for (let i = 0; i < outputs; i++) {
+        makeNode(-1, 0, 0, rand(0.86, 0.965) * W, rand(0.15, 0.85) * H);
+      }
+      // Scattered isolated feature nodes waiting to be discovered.
+      const scattered = Math.round(9 * k);
+      for (let i = 0; i < scattered; i++) {
+        const u = 0.12 + 0.85 * Math.pow(Math.random(), 0.75);
+        makeNode(-1, 0, 0, u * W, rand(0.12, 0.88) * H);
+      }
+
+      // Attach some isolated nodes with weak synapses; the rest stay
+      // disconnected until the self-healing pass finds them.
+      const Rc = connectRadius();
+      nodes.forEach((n, i) => {
+        if (n.cluster !== -1 || Math.random() < 0.45) return;
+        let best = -1;
+        let bestD = Rc * 1.8;
+        nodes.forEach((m, j) => {
+          if (j === i) return;
+          const d = Math.hypot(m.bx - n.bx, m.by - n.by);
+          if (d < bestD) { bestD = d; best = j; }
+        });
+        if (best >= 0) addEdge(i, best, rand(0.15, 0.35), false);
+      });
+
+      // A few weak exploratory connections across nearby clusters.
+      const weakTarget = Math.round(10 * k);
+      let tries = 0;
+      let weakMade = 0;
+      while (weakMade < weakTarget && tries++ < 300) {
+        const a = Math.floor(Math.random() * nodes.length);
+        const b = Math.floor(Math.random() * nodes.length);
+        if (a === b || nodes[a].cluster === nodes[b].cluster) continue;
+        const d = Math.hypot(nodes[a].bx - nodes[b].bx, nodes[a].by - nodes[b].by);
+        if (d < Rc * 1.4 && addEdge(a, b, rand(0.1, 0.3), false)) weakMade++;
+      }
+
+      maxNodes = nodes.length + 18;
     };
 
+    // ---- continuous learning ------------------------------------------------
+    // Glacial reorganization: weak synapses dissolve, strong ones persist,
+    // nearby clusters discover each other, nodes are born and fade away.
+    // Slow enough that no single change is ever noticeable.
+
+    const selfHeal = () => {
+      if (nodes.length < 2) return;
+      const i = Math.floor(Math.random() * nodes.length);
+      const n = nodes[i];
+      if (n.dying) return;
+      let best = -1;
+      let bestD = connectRadius() * 2.3;
+      nodes.forEach((m, j) => {
+        if (j === i || m.dying) return;
+        if (n.cluster !== -1 && m.cluster === n.cluster) return;
+        const d = Math.hypot(m.fx - n.fx, m.fy - n.fy);
+        if (d < bestD && !hasEdge(i, j)) { bestD = d; best = j; }
+      });
+      if (best >= 0) addEdge(i, best, rand(0.35, 0.6), false, 0); // grows in over ~4s
+    };
+
+    const birthNode = () => {
+      if (!clusters.length) return;
+      const ci = Math.floor(Math.random() * clusters.length);
+      const c = clusters[ci];
+      const ang = rand(0, TAU);
+      const rad = c.radius * rand(0.7, 1.25);
+      const idx = makeNode(ci, Math.cos(ang) * rad, Math.sin(ang) * rad, c.x, c.y, 0);
+      const near: { j: number; d: number }[] = [];
+      nodes.forEach((m, j) => {
+        if (j === idx || m.cluster !== ci) return;
+        near.push({ j, d: Math.hypot(m.lx - nodes[idx].lx, m.ly - nodes[idx].ly) });
+      });
+      near.sort((p, q) => p.d - q.d);
+      for (const { j } of near.slice(0, 2)) addEdge(idx, j, rand(0.45, 0.75), false, 0);
+    };
+
+    const killWeakNode = () => {
+      const cand: number[] = [];
+      nodes.forEach((n, i) => {
+        if (n.dying || n.birth < 0.95) return;
+        if (degree(i) <= 1) cand.push(i);
+      });
+      if (!cand.length) return;
+      const idx = cand[Math.floor(Math.random() * cand.length)];
+      nodes[idx].dying = true;
+      for (const e of edges) if (e.a === idx || e.b === idx) e.dying = true;
+    };
+
+    const learn = () => {
+      const Rc = connectRadius();
+      // Weak synapses stretched too far as clusters drift apart dissolve.
+      for (const e of edges) {
+        if (e.bridge || e.dying || e.w > 0.32) continue;
+        if (edgeLen(e) > Rc * 1.7 && Math.random() < 0.5) e.dying = true;
+      }
+      // Occasionally an unused weak connection simply fades.
+      if (Math.random() < 0.35) {
+        const weak = edges.filter((e) => !e.dying && !e.bridge && e.w < 0.3);
+        if (weak.length) weak[Math.floor(Math.random() * weak.length)].dying = true;
+      }
+
+      const roll = Math.random();
+      if (roll < 0.30) {
+        selfHeal(); // two nearby disconnected clusters discover each other
+      } else if (roll < 0.42 && nodes.length < maxNodes) {
+        birthNode();
+      } else if (roll < 0.52) {
+        killWeakNode();
+      } else if (roll < 0.74 && edges.length) {
+        const e = edges[Math.floor(Math.random() * edges.length)];
+        e.w = Math.min(1, e.w + rand(0.08, 0.2)); // reinforcement
+      } else if (roll < 0.86 && edges.length) {
+        const pool = edges.filter((e) => !e.bridge);
+        if (pool.length) {
+          const e = pool[Math.floor(Math.random() * pool.length)];
+          e.w = Math.max(0.08, e.w - rand(0.08, 0.2));
+          if (e.w < 0.12 && Math.random() < 0.5) e.dying = true;
+        }
+      }
+      // else: rest — stability between updates
+    };
+
+    // ---- per-frame updates ---------------------------------------------------
+
     const updateNodes = (t: number, dt: number) => {
+      // Clusters compress, expand, rotate and drift — almost imperceptibly.
+      for (const c of clusters) {
+        c.rot += c.rotV * dt;
+        c.scale = c.scaleBase + c.scaleAmp * Math.sin(c.scaleW * t + c.scaleP);
+        c.x += c.vx * dt;
+        c.y += c.vy * dt;
+        if (c.x < c.minX) c.vx = Math.abs(c.vx);
+        if (c.x > c.maxX) c.vx = -Math.abs(c.vx);
+        if (c.y < H * 0.12) c.vy = Math.abs(c.vy);
+        if (c.y > H * 0.88) c.vy = -Math.abs(c.vy);
+      }
+
       const rect = canvas.getBoundingClientRect();
       const mx = mouse.cx - rect.left;
       const my = mouse.cy - rect.top;
@@ -262,8 +420,18 @@ const NeuralNetworkBackground = () => {
       mouse.glow += ((inside ? 1 : 0) - mouse.glow) * kg;
 
       for (const n of nodes) {
-        n.x = n.bx + n.ax1 * Math.sin(n.w1 * t + n.p1) + n.ax2 * Math.sin(n.w2 * t + n.p2);
-        n.y = n.by + n.ay1 * Math.sin(n.w3 * t + n.p3) + n.ay2 * Math.sin(n.w4 * t + n.p4);
+        if (n.cluster >= 0) {
+          const c = clusters[n.cluster];
+          const cos = Math.cos(c.rot);
+          const sin = Math.sin(c.rot);
+          n.x = c.x + (n.lx * cos - n.ly * sin) * c.scale;
+          n.y = c.y + (n.lx * sin + n.ly * cos) * c.scale;
+        } else {
+          n.x = n.bx;
+          n.y = n.by;
+        }
+        n.x += n.ax1 * Math.sin(n.w1 * t + n.p1) + n.ax2 * Math.sin(n.w2 * t + n.p2);
+        n.y += n.ay1 * Math.sin(n.w3 * t + n.p3) + n.ay2 * Math.sin(n.w4 * t + n.p4);
 
         // Gentle cursor repel: max ~14px, spring return ~0.6s.
         let tx = 0;
@@ -284,8 +452,127 @@ const NeuralNetworkBackground = () => {
         n.oy += (ty - n.oy) * kr;
         n.fx = n.x + n.ox;
         n.fy = n.y + n.oy;
+
+        // Computation flash decays within ~400ms.
+        n.act *= Math.exp(-dt / 0.13);
+        // Birth / death fades.
+        if (n.birth < 1) n.birth = Math.min(1, n.birth + dt / 3);
+        if (n.dying && n.death > 0) n.death = Math.max(0, n.death - dt / 3);
+      }
+
+      // Remove fully faded nodes (and remap edge indices).
+      for (let i = nodes.length - 1; i >= 0; i--) {
+        if (nodes[i].dying && nodes[i].death <= 0) {
+          for (let j = edges.length - 1; j >= 0; j--) {
+            if (edges[j].a === i || edges[j].b === i) removeEdge(edges[j]);
+          }
+          nodes.splice(i, 1);
+          for (const e of edges) {
+            if (e.a > i) e.a--;
+            if (e.b > i) e.b--;
+          }
+          pairSet = new Set<number>();
+          for (const e of edges) pairSet.add(pairKey(e.a, e.b));
+        }
+      }
+
+      // Synapse growth / dissolution animations.
+      for (let i = edges.length - 1; i >= 0; i--) {
+        const e = edges[i];
+        e.grow = clamp(e.grow + (e.dying ? -dt / 3 : dt / 4), 0, 1);
+        if (e.dying && e.grow <= 0) removeEdge(e);
       }
     };
+
+    // ---- information propagation ---------------------------------------------
+    // A few packets at a time travel the graph like inference: reach a node,
+    // flash it, pick another connected edge (weighted, slightly different
+    // route every time) and continue.
+
+    const packetPos = (p: Packet) => {
+      const A = nodes[p.edge.a];
+      const B = nodes[p.edge.b];
+      const t = p.dir === 1 ? p.t : 1 - p.t;
+      return { x: A.fx + (B.fx - A.fx) * t, y: A.fy + (B.fy - A.fy) * t };
+    };
+
+    const spawnPacket = () => {
+      if (packets.length >= 4) return;
+      // Bias starts toward the input side (feature clusters).
+      let pool: number[] = [];
+      nodes.forEach((n, i) => {
+        if (!n.dying && n.fx < W * 0.55 && degree(i) > 0) pool.push(i);
+      });
+      if (!pool.length) {
+        nodes.forEach((n, i) => {
+          if (!n.dying && degree(i) > 0) pool.push(i);
+        });
+      }
+      if (!pool.length) return;
+      const ni = pool[Math.floor(Math.random() * pool.length)];
+      const opts = edges.filter((e) => !e.dying && e.grow > 0.4 && (e.a === ni || e.b === ni));
+      if (!opts.length) return;
+      let sum = 0;
+      for (const e of opts) sum += e.w;
+      let r = Math.random() * sum;
+      let chosen = opts[0];
+      for (const e of opts) { r -= e.w; if (r <= 0) { chosen = e; break; } }
+      packets.push({
+        edge: chosen,
+        dir: chosen.a === ni ? 1 : -1,
+        t: 0,
+        dur: Math.max(0.3, edgeLen(chosen) / rand(70, 110)),
+        hops: 0,
+        maxHops: 4 + Math.floor(Math.random() * 5),
+        c: Math.floor(Math.random() * 3),
+        dead: false,
+      });
+    };
+
+    const advancePackets = (dt: number) => {
+      for (const p of packets) {
+        // Packets slightly accelerate inside the cursor glow.
+        let speed = 1;
+        if (mouse.glow > 0.01) {
+          const pos = packetPos(p);
+          const d = Math.hypot(pos.x - mouse.gx, pos.y - mouse.gy);
+          if (d < 170) speed = 1 + 1.15 * (1 - d / 170) * mouse.glow;
+        }
+        p.t += (dt / p.dur) * speed;
+        if (p.t < 1) continue;
+
+        const arrived = p.dir === 1 ? p.edge.b : p.edge.a;
+        const n = nodes[arrived];
+        if (!n || n.dying) { p.dead = true; continue; }
+        n.act = 1; // computation flash at the node
+        p.hops++;
+        if (p.hops >= p.maxHops) { p.dead = true; continue; }
+
+        // Choose the next hop: weighted by synapse strength, forward-biased,
+        // never simply backtracking — every packet takes a different route.
+        const opts: { e: NetEdge; wt: number }[] = [];
+        for (const e2 of edges) {
+          if (e2 === p.edge || e2.dying || e2.grow <= 0.4) continue;
+          if (e2.a !== arrived && e2.b !== arrived) continue;
+          const other = e2.a === arrived ? e2.b : e2.a;
+          const forward = nodes[other].fx >= n.fx - 30;
+          opts.push({ e: e2, wt: e2.w * (forward ? 1.5 : 0.8) + 0.05 });
+        }
+        if (!opts.length) { p.dead = true; continue; }
+        let sum = 0;
+        for (const o of opts) sum += o.wt;
+        let r = Math.random() * sum;
+        let next = opts[0].e;
+        for (const o of opts) { r -= o.wt; if (r <= 0) { next = o.e; break; } }
+        p.edge = next;
+        p.dir = next.a === arrived ? 1 : -1;
+        p.t = 0;
+        p.dur = Math.max(0.3, edgeLen(next) / rand(70, 110));
+      }
+      packets = packets.filter((p) => !p.dead && !p.edge.dying && edges.includes(p.edge));
+    };
+
+    // ---- rendering -------------------------------------------------------------
 
     const render = () => {
       const dark = palette.dark;
@@ -307,15 +594,20 @@ const NeuralNetworkBackground = () => {
         ctx.fillRect(0, 0, W, H);
       }
 
-      // Edges — hairline, barely visible, fade with stretch.
-      ctx.lineWidth = 0.75;
+      // Synapses — weight drives thickness and brightness; strong pathways
+      // persist, weak ones are thin and faint. Endpoint activation brightens.
       for (const e of edges) {
         const A = nodes[e.a];
         const B = nodes[e.b];
         const d = Math.hypot(A.fx - B.fx, A.fy - B.fy);
-        const fade = Math.max(0, 1 - d / (Rc * (e.bridge ? 4.2 : 1.3)));
-        const alpha = e.alpha * fade * edgeScale;
+        const fade = Math.max(0, 1 - d / (Rc * (e.bridge ? 4.2 : 1.5)));
+        const actBoost = Math.max(A.act, B.act);
+        const alpha = Math.min(
+          0.17,
+          (0.045 + e.w * 0.06) * fade * edgeScale * e.grow * (1 + 1.1 * actBoost),
+        );
         if (alpha < 0.006) continue;
+        ctx.lineWidth = (0.5 + e.w * 0.7) * Math.max(0.25, e.grow);
         ctx.strokeStyle = `hsl(${rawOf(A.c)} / ${alpha})`;
         ctx.beginPath();
         ctx.moveTo(A.fx, A.fy);
@@ -323,39 +615,41 @@ const NeuralNetworkBackground = () => {
         ctx.stroke();
       }
 
-      // Nodes — 2–3px dots with a faint halo, +15% glow near the cursor.
+      // Neurons — 2–3px dots with a faint halo; computation flashes expand
+      // the halo briefly. Birth/death fades keep topology changes invisible.
       for (const n of nodes) {
+        const vis = n.birth * n.death;
+        if (vis < 0.015) continue;
         let boost = 0;
         if (mouse.glow > 0.01) {
           const d = Math.hypot(n.fx - mouse.gx, n.fy - mouse.gy);
           if (d < 170) boost = (1 - d / 170) * mouse.glow;
         }
-        const alpha = Math.min(0.6, n.a * nodeScale * (1 + 0.15 * boost));
+        const baseA = Math.min(0.6, n.a * nodeScale * vis * (1 + 0.15 * boost));
+        const actA = n.act * 0.3 * vis;
         const raw = rawOf(n.c);
-        ctx.fillStyle = `hsl(${raw} / ${alpha * 0.35})`;
+        ctx.fillStyle = `hsl(${raw} / ${Math.min(0.4, baseA * 0.35 + actA * 0.3)})`;
         ctx.beginPath();
-        ctx.arc(n.fx, n.fy, n.r * 2.6, 0, TAU);
+        ctx.arc(n.fx, n.fy, n.r * (2.6 + 3.2 * n.act), 0, TAU);
         ctx.fill();
-        ctx.fillStyle = `hsl(${raw} / ${alpha})`;
+        ctx.fillStyle = `hsl(${raw} / ${Math.min(0.85, baseA + actA)})`;
         ctx.beginPath();
-        ctx.arc(n.fx, n.fy, n.r, 0, TAU);
+        ctx.arc(n.fx, n.fy, n.r * (1 + 0.35 * n.act), 0, TAU);
         ctx.fill();
       }
 
-      // Data pulses — tiny dots travelling along random edges.
-      for (const p of pulses) {
-        const A = nodes[p.edge.a];
-        const B = nodes[p.edge.b];
-        const x = A.fx + (B.fx - A.fx) * p.t;
-        const y = A.fy + (B.fy - A.fy) * p.t;
+      // Information packets — ~2px luminous dots gliding along synapses.
+      for (const p of packets) {
+        const pos = packetPos(p);
         const fade = Math.sin(Math.PI * Math.min(1, p.t));
-        ctx.fillStyle = `hsl(${palette.c} / ${0.2 * fade})`;
+        const raw = rawOf(p.c);
+        ctx.fillStyle = `hsl(${raw} / ${0.22 * fade})`;
         ctx.beginPath();
-        ctx.arc(x, y, 4, 0, TAU);
+        ctx.arc(pos.x, pos.y, 5, 0, TAU);
         ctx.fill();
-        ctx.fillStyle = `hsl(${palette.c} / ${0.8 * fade})`;
+        ctx.fillStyle = `hsl(${raw} / ${0.85 * fade})`;
         ctx.beginPath();
-        ctx.arc(x, y, 1.6, 0, TAU);
+        ctx.arc(pos.x, pos.y, 2, 0, TAU);
         ctx.fill();
       }
     };
@@ -369,25 +663,22 @@ const NeuralNetworkBackground = () => {
 
       updateNodes(t, dt);
 
-      edgeTimer += dt;
-      if (edgeTimer > 0.3) {
-        edgeTimer = 0;
-        updateEdges();
+      // Continuous learning — one small event every few seconds.
+      learnTimer += dt;
+      if (learnTimer > nextLearnIn) {
+        learnTimer = 0;
+        nextLearnIn = rand(2.2, 3.4);
+        learn();
       }
 
-      pulseTimer += dt;
-      if (pulseTimer > nextPulseIn) {
-        pulseTimer = 0;
-        nextPulseIn = rand(2, 4);
-        if (pulses.length < 2 && edges.length > 4) {
-          pulses.push({
-            edge: edges[Math.floor(Math.random() * edges.length)],
-            t: 0,
-            dur: rand(1.8, 2.6),
-          });
-        }
+      // Information propagation.
+      advancePackets(dt);
+      spawnTimer += dt;
+      if (spawnTimer > nextSpawnIn) {
+        spawnTimer = 0;
+        nextSpawnIn = rand(1.2, 2.8);
+        if (packets.length < 3 && edges.length > 6) spawnPacket();
       }
-      pulses = pulses.filter((p) => (p.t += dt / p.dur) <= 1 && edges.includes(p.edge));
 
       render();
 
@@ -414,7 +705,6 @@ const NeuralNetworkBackground = () => {
     // Static single frame for reduced-motion users.
     const drawStatic = () => {
       updateNodes(0, 0.016);
-      updateEdges();
       render();
       canvas.style.opacity = "1";
     };
@@ -428,7 +718,6 @@ const NeuralNetworkBackground = () => {
       resizeTimer = window.setTimeout(() => {
         resize();
         generate();
-        updateEdges();
         if (reduced) drawStatic();
       }, 160);
     });
@@ -457,7 +746,6 @@ const NeuralNetworkBackground = () => {
     if (reduced) {
       drawStatic();
     } else {
-      updateEdges();
       io = new IntersectionObserver((entries) => {
         inView = entries[0].isIntersecting;
         if (inView && !document.hidden) start();
